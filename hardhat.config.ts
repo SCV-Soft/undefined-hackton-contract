@@ -22,6 +22,15 @@ const config: HardhatUserConfig = {
           },
         },
       },
+      {
+        version: "0.4.18",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
+      },
       // 솔리디티 버전 관련하여 컴파일 에러시 해당 버전을 추가하세요
     ],
   },
