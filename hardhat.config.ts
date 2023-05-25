@@ -7,6 +7,7 @@ import "@nomicfoundation/hardhat-network-helpers";
 import "@typechain/hardhat";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
+import "./scripts/tasks"
 
 dotenv.config();
 
@@ -37,12 +38,12 @@ const config: HardhatUserConfig = {
   networks: {
     goerli: {   
       url: `https://eth-goerli.g.alchemy.com/v2/${process.env.GOERLI_ALCHEMY_KEY}`,
-      accounts: [process.env.PRIVATE_KEY || ''],
+      accounts: [process.env.PRIVATE_KEY || '', process.env.USER_PRIVATE_KEY || ''],
       chainId: 5,
     },
     mumbai: {   
       url: `https://polygon-mumbai.g.alchemy.com/v2/${process.env.MUMBAI_ALCHEMY_KEY}`,
-      accounts: [process.env.PRIVATE_KEY || ''],
+      accounts: [process.env.PRIVATE_KEY || '', process.env.USER_PRIVATE_KEY || ''],
       chainId: 80001,
     },
   },
