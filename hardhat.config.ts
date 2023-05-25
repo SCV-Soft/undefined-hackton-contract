@@ -26,27 +26,16 @@ const config: HardhatUserConfig = {
     ],
   },
   networks: {
-    baobab: {   
-      url: `https://public-node-api.klaytnapi.com/v1/baobab`,
-      accounts: [process.env.PRIVATE_KEY || ''],
-      chainId: 1001,
-    },
-    cypress: {   
-      url: `https://public-node-api.klaytnapi.com/v1/cypress`,
-      accounts: [process.env.PRIVATE_KEY || ''],
-      chainId: 8217,
-      // gasPrice: 250_000_000_000,
-    },
     goerli: {   
       url: `https://eth-goerli.g.alchemy.com/v2/${process.env.GOERLI_ALCHEMY_KEY}`,
       accounts: [process.env.PRIVATE_KEY || ''],
       chainId: 5,
     },
-    mainnet: {
-      url: `https://eth-mainnet.g.alchemy.com/v2/${process.env.MAINNET_ALCHEMY_KEY}`,
+    mumbai: {   
+      url: `https://polygon-mumbai.g.alchemy.com/v2/${process.env.MUMBAI_ALCHEMY_KEY}`,
       accounts: [process.env.PRIVATE_KEY || ''],
-      chainId: 1,
-    }
+      chainId: 80001,
+    },
   },
 };
 
