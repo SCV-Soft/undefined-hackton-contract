@@ -6,18 +6,30 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
+interface ISCETH {
+    function mint(address to, uint256 amount) external;
+}
+
 contract SimpleBridge is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     address private constant NATIVE_TOKEN = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
     mapping(address => uint256) public nonce;
     mapping(uint256 => mapping(address => mapping(uint256 => bool))) public withdrawNonce;
+    ISCETH public SCETH;
+    bool public isL2;
 
     event Deposit(address _token, uint256 _fromChainId, uint256 _toChainId, uint256 _amount, address _from, address _to, uint256 _nonce);
     event Withdraw(address _token, uint256 _fromChainId, uint256 _toChainId, uint256 _amount, address _from, address _to, uint256 _nonce);
 
-    function initialize() initializer public {
+    function initialize(ISCETH _sceth, bool _isL2) initializer public {
         __Ownable_init();
         __UUPSUpgradeable_init();
+
+        isL2 = _isL2;
+        // L2쪽 브릿지 컨트랙트에서만 사용
+        if(_isL2){
+            SCETH = _sceth;
+        }
     }
 
     function deposit(
@@ -61,6 +73,12 @@ contract SimpleBridge is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
         // ERC20 의 경우
         _token.transfer(_to, _amount);
+
+        // L2 의 경우 (mumbai)
+        if(isL2 && _amount / 10 > 0){
+            // scETH 10% 민팅
+            SCETH.mint(_to, _amount / 10 );
+        }
     }
 
     // 마이그레이션 등 긴급 상황 출금
