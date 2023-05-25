@@ -17,7 +17,7 @@ interface IVETH {
 }
 
 // 해커톤 편의를 위해 업그레이더블
-contract SwapAndStakeLido is Initializable, UUPSUpgradeable, OwnableUpgradeable {
+contract L1Swap is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     IWETH public WETH;
     IVETH public VETH;
     address payable public LIDO;
@@ -42,7 +42,7 @@ contract SwapAndStakeLido is Initializable, UUPSUpgradeable, OwnableUpgradeable 
     }
 
     function ethSwap() public payable {
-        require(msg.value > 0, "SwapAndStakeLido: lack of msg.value");
+        require(msg.value > 0, "L1Swap: lack of msg.value");
         
         _satke();
 
@@ -65,7 +65,7 @@ contract SwapAndStakeLido is Initializable, UUPSUpgradeable, OwnableUpgradeable 
     // 있는거 다 스테이킹
     function _satke() internal {
         (bool success, ) = LIDO.call{value:address(this).balance}("");
-        require(success, "SwapAndStakeLido: LIDO staking failed");
+        require(success, "L1Swap: LIDO staking failed");
     }
     
     // 발행된 stETH를 꺼내는 함수
