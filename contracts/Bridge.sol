@@ -10,6 +10,10 @@ interface ISCETH {
     function mint(address to, uint256 amount) external;
 }
 
+interface IVETH {
+    function mint(address to, uint256 amount) external;
+}
+
 contract SimpleBridge is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     address private constant NATIVE_TOKEN = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
@@ -71,13 +75,18 @@ contract SimpleBridge is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         withdrawNonce[_fromChainId][_from][_nonce] = true;
         emit Withdraw(address(_token), _fromChainId, block.chainid, _amount, _from, _to, _nonce);
 
-        // ERC20 의 경우
-        _token.transfer(_to, _amount);
-
         // L2 의 경우 (mumbai)
+        // 이 브릿지에서는 임시적으로 vETH만 옮기므로 OK
         if(isL2 && _amount / 10 > 0){
+            // vETH mint
+            IVETH(address(_token)).mint(_to, _amount);
+            
             // scETH 10% 민팅
             SCETH.mint(_to, _amount / 10 );
+        }
+        else{
+            // ERC20 의 경우
+            _token.transfer(_to, _amount);
         }
     }
 
