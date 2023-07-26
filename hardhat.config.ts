@@ -46,6 +46,11 @@ const config: HardhatUserConfig = {
       accounts: [process.env.PRIVATE_KEY || '', process.env.USER_PRIVATE_KEY || ''],
       chainId: 80001,
     },
+    shibuya: {
+      url: `https://evm.shibuya.astar.network`,
+      accounts: [process.env.PRIVATE_KEY || '', process.env.USER_PRIVATE_KEY || ''],
+      chainId: 81,
+    }
   },
 };
 
