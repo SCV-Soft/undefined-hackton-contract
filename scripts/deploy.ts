@@ -1,25 +1,28 @@
 import { ethers, upgrades } from "hardhat";
 
 const bridgeAddress: {[key: number]:string} = {
-  5: "", // goerli
-  80001: "" // mumbai
+  5: "0x05134a61AF5E628E54cC609dA25B53FF2Caf293b", // goerli
+  80001: "", // mumbai
+  81: "0x920532BF55981cB98480AF0453aA7C63B23c1346" // shibuya
 }
 
-const l1SwapAddress = "0x7C216fB3C5C22989d0D2556702ea7AeCF474245f"
-const l2SwapAddress = "0xDA49F943Be939Ef9eE1BdaB3C9D1644Baae763bb"
+// L2는 Shibuya를 의미함
 
-const l1WethAddress = "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6"
-const l2WethAddress = "0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa"
+const l1SwapAddress = "0x28E4D287AD405b848E40668fFE20DDafC925841C"
+const l2SwapAddress = "0x2a90d4c4B799BD6238661E11920ad2E371046eEb"
 
-const l1VethAddress = "0xfC6ae96facE347BB6419859C1592825B96224ab0"
-const l2VethAddress = "0xe5b1C4Be4289CA511440C1287E0C9E031a3bfe3D"
+const l1WethAddress = "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6" // 고정
+const l2WethAddress = "0xB83508bB360Ad2c8726ba6E1746D03d4BCac387C" // 고정
 
-const scethAddress = "0x153fab4B5E067724B4387713ABfBB6Eb581119d6"
+const l1VethAddress = "0xfaCC1871330DB8c7346e7F76514D04857eEEA089"
+const l2VethAddress = "0xFF847bef92cdF7587341C7F1c8De03A35F4eE44D"
+
+const l2scethAddress = "0x485904f09Fec2e758FaF544893989a8d17cbd8Bc"
 
 const lidoAddress = "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F"
 
-const l1Bridge = "0x66AC44FC2b84B6618D09b61BFd52d85Dc17daCAb"
-const l2Bridge = "0xdC1B4896e0AeFa938D38cA86E63Bd508bD249B32"
+const l1Bridge = "0x05134a61AF5E628E54cC609dA25B53FF2Caf293b"
+const l2Bridge = "0x920532BF55981cB98480AF0453aA7C63B23c1346"
 
 async function deploy_bridge_l1() {
 
@@ -37,7 +40,7 @@ async function deploy_bridge_l1() {
   console.log(`bridge l1: ${bridge.address}`);
 }
 
-async function deploy_bridge_l2() {
+async function deploy_bridge_l2(l2_veth_address: string, l2_sceth_address: string) {
   const accounts = await ethers.getSigners();
   const admin = accounts[0];
   const user = accounts[1];
@@ -47,7 +50,7 @@ async function deploy_bridge_l2() {
   const bridge = await upgrades.deployProxy(
     bridgeFactory,
     [
-      scethAddress,
+      l2_sceth_address,
       true,
     ],
     {kind: "uups"},
@@ -56,7 +59,7 @@ async function deploy_bridge_l2() {
   console.log(`bridge l2: ${bridge.address}`);
 
   // veth 민터로 설정
-  const veth = new ethers.Contract(l2VethAddress, [{
+  const veth = new ethers.Contract(l2_veth_address, [{
     "inputs": [
       {
         "internalType": "address",
@@ -74,7 +77,7 @@ async function deploy_bridge_l2() {
 
 
   // sceth 민터로 설정
-  const sceth = new ethers.Contract(scethAddress, [{
+  const sceth = new ethers.Contract(l2_sceth_address, [{
     "inputs": [
       {
         "internalType": "address",
@@ -102,9 +105,11 @@ async function deploy_veth() {
   );
   await veth.deployed();
   console.log(`veth: ${veth.address}`);
+
+  return veth.address;
 }
 
-async function deploy_l1Swap() {
+async function deploy_l1Swap(l1_veth_address: string) {
   const accounts = await ethers.getSigners();
   const admin = accounts[0];
   const user = accounts[1];
@@ -115,7 +120,7 @@ async function deploy_l1Swap() {
     l1swapFactory,
     [
       l1WethAddress,// _weth
-      l1VethAddress, // _veth
+      l1_veth_address, // _veth
       lidoAddress,// _lido
     ],
     {kind: "uups"},
@@ -125,7 +130,7 @@ async function deploy_l1Swap() {
 
   // veth의 minter를 l1sawp로 지정함
 
-  const veth = new ethers.Contract(l1VethAddress, [{
+  const veth = new ethers.Contract(l1_veth_address, [{
     "inputs": [
       {
         "internalType": "address",
@@ -156,9 +161,11 @@ async function deploy_sceth() {
   );
   await sceth.deployed();
   console.log(`sceth: ${sceth.address}`);
+
+  return sceth.address;
 }
 
-async function deploy_l2Swap() {
+async function deploy_l2Swap(l2_veth_address: string, l2_sceth_address: string) {
   const accounts = await ethers.getSigners();
   const admin = accounts[0];
   const user = accounts[1];
@@ -169,8 +176,8 @@ async function deploy_l2Swap() {
     l2swapFactory,
     [
       l2WethAddress,// _weth
-      l2VethAddress, // _veth
-      scethAddress,// _sceth
+      l2_veth_address, // _veth
+      l2_sceth_address,// _sceth
     ],
     {kind: "uups"},
   );
@@ -179,7 +186,7 @@ async function deploy_l2Swap() {
 
   // veth를 예치해 둠 (실제로는 브릿지에서 꺼내온 VETH를 예치한다.)
   // 시연을 위한 민팅
-  const veth = new ethers.Contract(l2VethAddress, [{
+  const veth = new ethers.Contract(l2_veth_address, [{
     "inputs": [
       {
         "internalType": "address",
@@ -202,7 +209,7 @@ async function deploy_l2Swap() {
   await (await veth.mint(l2swap.address, "1000000000000000000")).wait()
 
   // sc minter로 설정
-  const sceth = new ethers.Contract(scethAddress, [{
+  const sceth = new ethers.Contract(l2_sceth_address, [{
     "inputs": [
       {
         "internalType": "address",
@@ -241,7 +248,20 @@ async function upgrade_bridge() {
   await proxyContract.deployed();
 }
 
-deploy_bridge_l2().catch((error) => {
+async function deploy_l1_all() {
+  await deploy_bridge_l1();
+  const veth_address = await deploy_veth();
+  await deploy_l1Swap(veth_address);
+}
+
+async function deploy_l2_all() {
+  // const veth_address = await deploy_veth();
+  // const sceth_address = await deploy_sceth();
+  // await deploy_bridge_l2(veth_address, sceth_address);
+  await deploy_l2Swap(l2VethAddress, l2scethAddress);
+}
+
+deploy_l2_all().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
