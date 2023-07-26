@@ -219,9 +219,17 @@ async function deploy_l2Swap() {
   await (await sceth.addMinter(l2swap.address)).wait()
 }
 
+async function deploy_astar_mockweth() { // 처음 한번만 배포해두고 계속 이용하면 됨
 
-
-
+  const mockWethFactory = await ethers.getContractFactory("MockWETH");
+  const mockWeth = await upgrades.deployProxy(
+    mockWethFactory,
+    [],
+    {kind: "uups"},
+  );
+  await mockWeth.deployed();
+  console.log(`mock Weth: ${mockWeth.address}`);
+}
 
 async function upgrade_bridge() {
   const chainId = (await ethers.provider.getNetwork()).chainId;

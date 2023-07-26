@@ -5,6 +5,7 @@ import L2SwapAbi from "../artifacts/contracts/L2Swap.sol/L2Swap.json"
 import vethAbi from "../artifacts/contracts/VETH.sol/VETH.json"
 import wethAbi from "../artifacts/contracts/WETH.sol/WETH9.json"
 import L1bridgeAbi from "../artifacts/contracts/Bridge.sol/SimpleBridge.json"
+import AstarMockWETHAbi from "../artifacts/contracts/astar/MockWETH.sol/MockWETH.json"
 
 const l1SwapAddress = "0x7C216fB3C5C22989d0D2556702ea7AeCF474245f"
 const l2SwapAddress = "0xDA49F943Be939Ef9eE1BdaB3C9D1644Baae763bb"
@@ -21,6 +22,8 @@ const lidoAddress = "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F"
 
 const l1BridgeAddress = "0x66AC44FC2b84B6618D09b61BFd52d85Dc17daCAb"
 const l2BridgeAddress = "0xdC1B4896e0AeFa938D38cA86E63Bd508bD249B32"
+
+const astarWethAddress = "0xB83508bB360Ad2c8726ba6E1746D03d4BCac387C"
 
 
 // L1 스왑(ETH)
@@ -124,4 +127,19 @@ task("deposit-l2swap", "Deposit(mint) vETH to l2Swap")
 
         await (await veth.mint(l2SwapAddress, args.amount)).wait()
     });
+
+
+// Mock WETH mint
+task("mint-mock-weth", "Mint WETH for Astar chain test")
+.addParam("amount", "amount of tokens (wei)")
+.addParam("to", "address who get token")
+.setAction(async (args, { ethers, network }) => {
+    const accounts = await ethers.getSigners();
+    const admin = accounts[0];
+    const user = accounts[1];
+
+    const weth = new ethers.Contract(astarWethAddress, AstarMockWETHAbi.abi, admin);
+
+    await (await weth.mint(args.to, args.amount)).wait()
+});
 
