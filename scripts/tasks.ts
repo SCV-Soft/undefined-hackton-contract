@@ -8,25 +8,29 @@ import L1bridgeAbi from "../artifacts/contracts/Bridge.sol/SimpleBridge.json"
 import AstarMockWETHAbi from "../artifacts/contracts/astar/MockWETH.sol/MockWETH.json"
 import CBridgeTestAbi from "../artifacts/contracts/cBridgeTest.sol/CBridgeTest.json"
 
-const l1SwapAddress = "0x7C216fB3C5C22989d0D2556702ea7AeCF474245f"
-const l2SwapAddress = "0xDA49F943Be939Ef9eE1BdaB3C9D1644Baae763bb"
+const l1SwapAddress = "0x28E4D287AD405b848E40668fFE20DDafC925841C"
+const l2SwapAddress = "0x2a90d4c4B799BD6238661E11920ad2E371046eEb"
 
 const l1WethAddress = "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6"
-const l2WethAddress = "0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa"
+const l2WethAddress = "0xB83508bB360Ad2c8726ba6E1746D03d4BCac387C"
 
-const l1VethAddress = "0xfC6ae96facE347BB6419859C1592825B96224ab0"
-const l2VethAddress = "0xe5b1C4Be4289CA511440C1287E0C9E031a3bfe3D"
+const l1VethAddress = "0xfaCC1871330DB8c7346e7F76514D04857eEEA089"
+const l2VethAddress = "0xFF847bef92cdF7587341C7F1c8De03A35F4eE44D"
 
-const scethAddress = "0x153fab4B5E067724B4387713ABfBB6Eb581119d6"
+const l2AtomAddress = "0xAFc85AbC6DB664dAfF2Dc1007A0428cFCaDb392F"
+
+const scethAddress = "0x485904f09Fec2e758FaF544893989a8d17cbd8Bc"
 
 const lidoAddress = "0x1643E812aE58766192Cf7D2Cf9567dF2C37e9B7F"
 
-const l1BridgeAddress = "0x66AC44FC2b84B6618D09b61BFd52d85Dc17daCAb"
-const l2BridgeAddress = "0xdC1B4896e0AeFa938D38cA86E63Bd508bD249B32"
+const l1BridgeAddress = "0x05134a61AF5E628E54cC609dA25B53FF2Caf293b"
+const l2BridgeAddress = "0x920532BF55981cB98480AF0453aA7C63B23c1346"
 
 const astarWethAddress = "0xB83508bB360Ad2c8726ba6E1746D03d4BCac387C"
 
 const l1cBridgeTestAddress = "0x0D8ba3fDac0b42CBab9eDAbBa5ebAC11e22726a1"
+
+const astarSwapRouterAddress = "0xD28D77DaB1af0334c130AAAd09525e3762B2D50d"
 
 const cBridgeMessageBusAddress: {[key: number]:string} = {
     5: "0xF25170F86E4291a99a9A560032Fe9948b8BcFBB2", // goerli
@@ -182,3 +186,112 @@ task("send-message", "cBridge test")
     })).wait()
 });
 
+// add liquidity
+task("add-liquidity", "Add liquidity")
+.addParam("amount", "Amount of stake")
+.setAction(async (args, { ethers, network }) => {
+    const accounts = await ethers.getSigners();
+    const admin = accounts[0];
+    const user = accounts[1];
+
+    // approve first
+    const veth = new ethers.Contract(l2VethAddress, vethAbi.abi, admin);
+    await (await veth.approve(astarSwapRouterAddress, ethers.constants.MaxUint256)).wait()
+
+    const vatom = new ethers.Contract(l2AtomAddress, vethAbi.abi, admin);
+    await (await vatom.approve(astarSwapRouterAddress, ethers.constants.MaxUint256)).wait()
+
+    const router = new ethers.Contract(
+        astarSwapRouterAddress,
+        ["function addLiquidity(address,address,uint,uint,uint,uint,address,uint) external returns (uint,uint,uint)"],
+        admin
+    );
+
+    await (await router.addLiquidity(
+        l2VethAddress, //     address tokenA,
+        l2AtomAddress, //     address tokenB,
+        args.amount, //     uint amountADesired,
+        args.amount,//     uint amountBDesired,
+        args.amount,//     uint amountAMin,
+        args.amount,//     uint amountBMin,
+        admin.address, //     address to,
+        ethers.constants.MaxUint256 //     uint deadline
+    )).wait()
+});
+
+
+// VETH mint
+task("l2-veth-mint", "mint l2 veth")
+    .addParam("amount", "amount of tokens (wei)")
+    .addParam("to", "to address")
+    .setAction(async (args, { ethers, network }) => {
+        const accounts = await ethers.getSigners();
+        const admin = accounts[0];
+        const user = accounts[1];
+
+        const veth = new ethers.Contract(l2VethAddress, vethAbi.abi, admin);
+
+        await (await veth.mint(args.to, args.amount)).wait()
+    });
+
+
+// @todo [Astar hackerton] swap vETH -> vATOM (하실때 메타마스크에서 Astar testnet으로 네트워크 변경)
+task("swap-veth-to-vatom", "swap")
+.addParam("amountin", "Amount of stake")
+.setAction(async (args, { ethers, network }) => {
+    const accounts = await ethers.getSigners();
+    const admin = accounts[0];
+    const user = accounts[1];
+
+    // approve first
+    const veth = new ethers.Contract(l2VethAddress, vethAbi.abi, admin);
+    await (await veth.connect(user).approve(astarSwapRouterAddress, ethers.constants.MaxUint256)).wait()
+
+    const vatom = new ethers.Contract(l2AtomAddress, vethAbi.abi, admin);
+    // await (await vatom.connect(user).approve(astarSwapRouterAddress, ethers.constants.MaxUint256)).wait()
+
+    const router = new ethers.Contract(
+        astarSwapRouterAddress,
+        ["function swapExactTokensForTokens(uint,uint,address[],address,uint) external returns (uint[])"],
+        admin
+    );
+
+    await (await router.connect(user).swapExactTokensForTokens(
+        args.amountin, // uint amountIn,
+        0, // uint amountOutMin,
+        [veth.address, vatom.address], // address[] calldata path,
+        user.address, // address to,
+        ethers.constants.MaxUint256 // uint deadline  
+    )).wait()
+});
+
+
+// @todo [Astar hackerton] swap vATOM -> vETH (하실때 메타마스크에서 Astar testnet으로 네트워크 변경)
+task("swap-vatom-to-veth", "swap")
+.addParam("amountin", "Amount of stake")
+.setAction(async (args, { ethers, network }) => {
+    const accounts = await ethers.getSigners();
+    const admin = accounts[0];
+    const user = accounts[1];
+
+    // approve first
+    const veth = new ethers.Contract(l2VethAddress, vethAbi.abi, admin);
+    // await (await veth.connect(user).approve(astarSwapRouterAddress, ethers.constants.MaxUint256)).wait()
+
+    const vatom = new ethers.Contract(l2AtomAddress, vethAbi.abi, admin);
+    await (await vatom.connect(user).approve(astarSwapRouterAddress, ethers.constants.MaxUint256)).wait()
+
+    const router = new ethers.Contract(
+        astarSwapRouterAddress,
+        ["function swapExactTokensForTokens(uint,uint,address[],address,uint) external returns (uint[])"],
+        admin
+    );
+
+    await (await router.connect(user).swapExactTokensForTokens(
+        args.amountin, // uint amountIn,
+        0, // uint amountOutMin,
+        [vatom.address, veth.address], // address[] calldata path,
+        user.address, // address to,
+        ethers.constants.MaxUint256 // uint deadline  
+    )).wait()
+});
