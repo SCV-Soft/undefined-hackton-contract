@@ -6,6 +6,7 @@ import vethAbi from "../artifacts/contracts/VETH.sol/VETH.json"
 import wethAbi from "../artifacts/contracts/WETH.sol/WETH9.json"
 import L1bridgeAbi from "../artifacts/contracts/Bridge.sol/SimpleBridge.json"
 import AstarMockWETHAbi from "../artifacts/contracts/astar/MockWETH.sol/MockWETH.json"
+import CBridgeTestAbi from "../artifacts/contracts/cBridgeTest.sol/CBridgeTest.json"
 
 const l1SwapAddress = "0x7C216fB3C5C22989d0D2556702ea7AeCF474245f"
 const l2SwapAddress = "0xDA49F943Be939Ef9eE1BdaB3C9D1644Baae763bb"
@@ -25,6 +26,13 @@ const l2BridgeAddress = "0xdC1B4896e0AeFa938D38cA86E63Bd508bD249B32"
 
 const astarWethAddress = "0xB83508bB360Ad2c8726ba6E1746D03d4BCac387C"
 
+const l1cBridgeTestAddress = "0x0D8ba3fDac0b42CBab9eDAbBa5ebAC11e22726a1"
+
+const cBridgeMessageBusAddress: {[key: number]:string} = {
+    5: "0xF25170F86E4291a99a9A560032Fe9948b8BcFBB2", // goerli
+    80001: "0x7d43AABC515C356145049227CeE54B608342c0ad", // mumbai
+    81: "0xa3d23891f00b8d34e31096c0cee1734595840d4d" // shibuya
+  }
 
 // L1 스왑(ETH)
 // @todo 프론트에서 호출해야 함 (이더리움에서 실행)
@@ -141,5 +149,36 @@ task("mint-mock-weth", "Mint WETH for Astar chain test")
     const weth = new ethers.Contract(astarWethAddress, AstarMockWETHAbi.abi, admin);
 
     await (await weth.mint(args.to, args.amount)).wait()
+});
+
+// Mock WETH mint
+task("send-message", "cBridge test")
+.addParam("dstaddress", "Destination address")
+.addParam("dstchain", "Destination chainid")
+.setAction(async (args, { ethers, network }) => {
+    const accounts = await ethers.getSigners();
+    const admin = accounts[0];
+    const user = accounts[1];
+
+    const chainId = (await ethers.provider.getNetwork()).chainId;
+    const messageBusAddress = cBridgeMessageBusAddress[chainId];
+
+    const messageBus = new ethers.Contract(
+        messageBusAddress,
+        ["function calcFee(bytes calldata _message) public view returns (uint256)"],
+        admin
+    );
+
+    // 필요한 가스 계산
+    const message = ethers.utils.arrayify("0x1234");
+    console.log(message)
+    const fee = (await messageBus.calcFee(message)).mul(3)
+    console.log(fee)
+
+    const test = new ethers.Contract(l1cBridgeTestAddress, CBridgeTestAbi.abi, admin);
+ 
+    await (await test.sendtest(args.dstaddress, args.dstchain, message, {
+        value: fee
+    })).wait()
 });
 

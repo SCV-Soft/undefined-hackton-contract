@@ -6,6 +6,12 @@ const bridgeAddress: {[key: number]:string} = {
   81: "0x920532BF55981cB98480AF0453aA7C63B23c1346" // shibuya
 }
 
+const cBridgeMessageBusAddress: {[key: number]:string} = {
+  5: "0xF25170F86E4291a99a9A560032Fe9948b8BcFBB2", // goerli
+  80001: "0x7d43AABC515C356145049227CeE54B608342c0ad", // mumbai
+  81: "0xa3d23891f00b8d34e31096c0cee1734595840d4d" // shibuya
+}
+
 // L2는 Shibuya를 의미함
 
 const l1SwapAddress = "0x28E4D287AD405b848E40668fFE20DDafC925841C"
@@ -238,6 +244,18 @@ async function deploy_astar_mockweth() { // 처음 한번만 배포해두고 계
   console.log(`mock Weth: ${mockWeth.address}`);
 }
 
+async function cbridge_test() {
+
+  const chainId = (await ethers.provider.getNetwork()).chainId;
+  const messageBusAddress = cBridgeMessageBusAddress[chainId];
+
+  const cBridgeTestFactory = await ethers.getContractFactory("CBridgeTest");
+  const bridgeTest = await cBridgeTestFactory.deploy(messageBusAddress);
+  await bridgeTest.deployed();
+  console.log(`bridgeTest for ${chainId} chain: ${bridgeTest.address}, message bus is ${messageBusAddress}`);
+
+}
+
 async function upgrade_bridge() {
   const chainId = (await ethers.provider.getNetwork()).chainId;
   const bridge_address = bridgeAddress[chainId];
@@ -261,7 +279,7 @@ async function deploy_l2_all() {
   await deploy_l2Swap(l2VethAddress, l2scethAddress);
 }
 
-deploy_l2_all().catch((error) => {
+cbridge_test().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
